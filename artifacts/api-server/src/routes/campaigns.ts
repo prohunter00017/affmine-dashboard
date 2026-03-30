@@ -46,22 +46,23 @@ interface ParsedCampaign {
   incentive: string;
 }
 
+function parseSingleCountry(co: unknown): { code: string; name: string } | null {
+  if (typeof co === "string") return { code: co.trim(), name: co.trim() };
+  if (co && typeof co === "object") {
+    const obj = co as Record<string, unknown>;
+    const code = String(obj.code ?? obj.country_code ?? obj["#text"] ?? "").trim();
+    const name = String(obj.name ?? obj.country_name ?? code).trim();
+    if (code) return { code, name };
+  }
+  return null;
+}
+
 function parseCountries(raw: unknown): Array<{ code: string; name: string }> {
   if (!raw) return [];
 
   if (Array.isArray(raw)) {
-    return raw
-      .map((co) => {
-        if (typeof co === "string") return { code: co.trim(), name: co.trim() };
-        if (co && typeof co === "object") {
-          const obj = co as Record<string, unknown>;
-          const code = String(obj.code ?? obj.country_code ?? obj["#text"] ?? "").trim();
-          const name = String(obj.name ?? obj.country_name ?? code).trim();
-          return { code, name };
-        }
-        return null;
-      })
-      .filter((co): co is { code: string; name: string } => co !== null && co.code !== "");
+    return raw.map(parseSingleCountry)
+      .filter((co): co is { code: string; name: string } => co !== null);
   }
 
   if (typeof raw === "string" && raw.trim()) {
@@ -71,8 +72,17 @@ function parseCountries(raw: unknown): Array<{ code: string; name: string }> {
   if (typeof raw === "object" && raw !== null) {
     const obj = raw as Record<string, unknown>;
     if (obj.country) {
-      return parseCountries(obj.country);
+      const countryVal = obj.country;
+      if (Array.isArray(countryVal)) {
+        return countryVal.map(parseSingleCountry)
+          .filter((co): co is { code: string; name: string } => co !== null);
+      }
+      const single = parseSingleCountry(countryVal);
+      if (single) return [single];
+      return [];
     }
+    const single = parseSingleCountry(raw);
+    if (single) return [single];
   }
 
   return [];
@@ -128,30 +138,50 @@ function extractCampaign(c: Record<string, unknown>): ParsedCampaign {
     c.category ?? c.categories ?? c.vertical ?? c.offer_category ?? "Unknown"
   ).trim();
 
+  const previewRaw = c.preview_url ?? c.thumbnail ?? c.preview ?? c.image_url ?? c.offer_image ?? null;
+  const previewUrl = previewRaw != null ? String(previewRaw).trim() || null : null;
+
+  const trackingRaw = c.tracking_url ?? c.offer_url ?? c.click_url ?? c.url ?? "";
+  const trackingUrl = String(trackingRaw).trim();
+
   return {
-    id: String(c.id ?? c.offer_id ?? c.campaign_id ?? "").trim(),
+    id: String(c.offer_id ?? c.id ?? c.campaign_id ?? "").trim(),
     name: String(c.name ?? c.offer_name ?? c.title ?? c.campaign_name ?? "").trim(),
     payout: payoutStr,
-    payout_type: String(c.payout_type ?? c.conversion_type ?? c.type ?? "CPA").trim(),
+    payout_type: String(c.price_format ?? c.payout_type ?? c.conversion_type ?? c.type ?? "CPA").trim(),
     currency: String(c.currency ?? c.payout_currency ?? "USD").trim(),
-    preview_url: (c.preview_url ?? c.thumbnail ?? c.preview ?? c.image_url ?? c.offer_image ?? null) as string | null,
-    tracking_url: String(c.tracking_url ?? c.offer_url ?? c.click_url ?? c.url ?? "").trim(),
+    preview_url: previewUrl,
+    tracking_url: trackingUrl,
     description: c.description != null ? String(c.description).trim() : (c.offer_description != null ? String(c.offer_description).trim() : null),
     countries: parseCountries(c.countries ?? c.country),
-    platforms: parsePlatforms(c.platforms ?? c.platform ?? c.allowed_platforms),
+    platforms: parsePlatforms(c.platforms ?? c.platform ?? c.allowed_platform ?? c.allowed_platforms),
     category,
     incentive,
   };
 }
 
+function unwrapRoot(obj: Record<string, unknown>): Record<string, unknown> {
+  const wrapperKeys = ["offer_feed", "response", "result", "data"];
+  for (const key of wrapperKeys) {
+    const val = obj[key];
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      logger.info({ wrapperKey: key }, "Unwrapped root object");
+      return val as Record<string, unknown>;
+    }
+  }
+  return obj;
+}
+
 function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown>[] {
+  const root = unwrapRoot(obj);
+
   const candidateKeys = [
-    "data", "offers", "campaigns", "rows", "results",
+    "offers", "data", "campaigns", "rows", "results",
     "items", "offer", "campaign", "row",
   ];
 
   for (const key of candidateKeys) {
-    const val = obj[key];
+    const val = root[key];
     if (Array.isArray(val) && val.length > 0) {
       logger.info({ key, count: val.length }, "Found campaigns at key");
       return val as Record<string, unknown>[];
@@ -168,7 +198,7 @@ function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown
     }
   }
 
-  for (const [key, val] of Object.entries(obj)) {
+  for (const [key, val] of Object.entries(root)) {
     if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object") {
       logger.info({ key, count: val.length }, "Found campaigns array at dynamic key");
       return val as Record<string, unknown>[];
@@ -239,7 +269,10 @@ function parseAffMineResponse(rawText: string): {
 
     logger.info({ jsonTopKeys: Object.keys(parsed) }, "JSON parsed top-level keys");
 
-    const errorId = parsed.error_id ?? parsed.errorId ?? parsed.error;
+    const root = unwrapRoot(parsed);
+    logger.info({ rootKeys: Object.keys(root) }, "JSON root keys after unwrap");
+
+    const errorId = root.error_id ?? root.errorId ?? root.error;
     if (errorId && Number(errorId) !== 0 && typeof errorId !== "object") {
       const code = Number(errorId);
       if (code === 100) {
@@ -248,14 +281,18 @@ function parseAffMineResponse(rawText: string): {
       return { total: 0, campaigns: [], error: `AffMine error: ${errorId}` };
     }
 
+    const successVal = root.success;
+    if (successVal === false || successVal === "false") {
+      return { total: 0, campaigns: [], error: String(root.message ?? "Request failed") };
+    }
+
     const items = findArrayInObject(parsed);
     if (items.length > 0) {
       logger.info({ sampleKeys: Object.keys(items[0]) }, "Sample JSON campaign keys");
-      logger.info({ sample: JSON.stringify(items[0]).slice(0, 500) }, "Sample JSON campaign");
     }
 
     const campaigns = items.map(extractCampaign);
-    const totalRaw = parsed.total_count ?? parsed.totalCount ?? parsed.count ?? parsed.row_count ?? parsed.total;
+    const totalRaw = root.row_count ?? root.total_count ?? root.totalCount ?? root.count ?? root.total;
     const total =
       typeof totalRaw === "number"
         ? totalRaw
