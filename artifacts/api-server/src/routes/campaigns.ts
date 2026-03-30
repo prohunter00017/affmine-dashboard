@@ -135,7 +135,7 @@ function extractCampaign(c: Record<string, unknown>): ParsedCampaign {
       : "no";
 
   const category = String(
-    c.category ?? c.categories ?? c.vertical ?? c.offer_category ?? "Unknown"
+    c.category ?? c.categories ?? c.vertical ?? c.offer_category ?? c.converts_on ?? "Unknown"
   ).trim();
 
   const previewRaw = c.preview_url ?? c.thumbnail ?? c.preview ?? c.image_url ?? c.offer_image ?? null;
