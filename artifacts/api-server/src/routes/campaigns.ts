@@ -406,14 +406,23 @@ router.get("/campaigns", async (req, res): Promise<void> => {
   }
 
   const { aff_id, api_key, start_row, limit_row, ...filters } = parsed.data;
+  const { category, ...apiFilters } = filters;
 
   try {
     let result;
-    if (start_row || limit_row) {
-      result = await fetchCampaigns(aff_id, api_key, { ...filters, start_row, limit_row });
+    if (category) {
+      result = await fetchAllCampaigns(aff_id, api_key, apiFilters);
+      const lower = category.toLowerCase();
+      result.campaigns = result.campaigns.filter(
+        (c) => c.category.toLowerCase() === lower,
+      );
+      result.total = result.campaigns.length;
+    } else if (start_row || limit_row) {
+      result = await fetchCampaigns(aff_id, api_key, { ...apiFilters, start_row, limit_row });
     } else {
-      result = await fetchAllCampaigns(aff_id, api_key, filters);
+      result = await fetchAllCampaigns(aff_id, api_key, apiFilters);
     }
+
     res.json(GetCampaignsResponse.parse(result));
   } catch (err: unknown) {
     const e = err as Error & { status?: number };
