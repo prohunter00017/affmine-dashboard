@@ -13,7 +13,14 @@ import type {
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ApiError,
+  CampaignStats,
+  CampaignsResponse,
+  GetCampaignStatsParams,
+  GetCampaignsParams,
+  HealthStatus,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
@@ -92,6 +99,199 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Proxy to AffMine getCampaigns API with optional filters
+ * @summary Get all campaigns
+ */
+export const getGetCampaignsUrl = (params: GetCampaignsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns?${stringifiedParams}`
+    : `/api/campaigns`;
+};
+
+export const getCampaigns = async (
+  params: GetCampaignsParams,
+  options?: RequestInit,
+): Promise<CampaignsResponse> => {
+  return customFetch<CampaignsResponse>(getGetCampaignsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCampaignsQueryKey = (params?: GetCampaignsParams) => {
+  return [`/api/campaigns`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCampaignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaigns>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaigns>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCampaignsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCampaigns>>> = ({
+    signal,
+  }) => getCampaigns(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaigns>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaigns>>
+>;
+export type GetCampaignsQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get all campaigns
+ */
+
+export function useGetCampaigns<
+  TData = Awaited<ReturnType<typeof getCampaigns>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaigns>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns aggregated statistics across all campaigns
+ * @summary Get campaign statistics
+ */
+export const getGetCampaignStatsUrl = (params: GetCampaignStatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/stats?${stringifiedParams}`
+    : `/api/campaigns/stats`;
+};
+
+export const getCampaignStats = async (
+  params: GetCampaignStatsParams,
+  options?: RequestInit,
+): Promise<CampaignStats> => {
+  return customFetch<CampaignStats>(getGetCampaignStatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCampaignStatsQueryKey = (
+  params?: GetCampaignStatsParams,
+) => {
+  return [`/api/campaigns/stats`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCampaignStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignStats>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCampaignStatsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignStats>>
+  > = ({ signal }) => getCampaignStats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignStats>>
+>;
+export type GetCampaignStatsQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get campaign statistics
+ */
+
+export function useGetCampaignStats<
+  TData = Awaited<ReturnType<typeof getCampaignStats>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignStatsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

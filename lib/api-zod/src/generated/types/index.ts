@@ -6,4 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./apiError";
+export * from "./campaign";
+export * from "./campaignsResponse";
+export * from "./campaignStats";
+export * from "./categoryStat";
+export * from "./countryEntry";
+export * from "./countryStat";
+export * from "./getCampaignsParams";
+export * from "./getCampaignStatsParams";
 export * from "./healthStatus";
+export * from "./platformStat";

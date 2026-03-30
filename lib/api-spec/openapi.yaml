@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: campaigns
+    description: AffMine campaign operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /campaigns:
+    get:
+      operationId: getCampaigns
+      tags: [campaigns]
+      summary: Get all campaigns
+      description: Proxy to AffMine getCampaigns API with optional filters
+      parameters:
+        - name: aff_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offer_status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: countries
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: platform
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: incentive
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start_row
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit_row
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignsResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /campaigns/stats:
+    get:
+      operationId: getCampaignStats
+      tags: [campaigns]
+      summary: Get campaign statistics
+      description: Returns aggregated statistics across all campaigns
+      parameters:
+        - name: aff_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Campaign statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignStats"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +141,149 @@ components:
           type: string
       required:
         - status
-
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        payout:
+          type: string
+        payout_type:
+          type: string
+        currency:
+          type: string
+        preview_url:
+          type: ["string", "null"]
+        tracking_url:
+          type: string
+        description:
+          type: ["string", "null"]
+        countries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryEntry"
+        platforms:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        incentive:
+          type: string
+      required:
+        - id
+        - name
+        - payout
+        - payout_type
+        - currency
+        - preview_url
+        - tracking_url
+        - description
+        - countries
+        - platforms
+        - category
+        - incentive
+    CountryEntry:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+      required:
+        - code
+        - name
+    CampaignsResponse:
+      type: object
+      properties:
+        total:
+          type: number
+        campaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/Campaign"
+      required:
+        - total
+        - campaigns
+    CategoryStat:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+        avg_payout:
+          type: number
+      required:
+        - name
+        - count
+        - avg_payout
+    CountryStat:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        count:
+          type: number
+      required:
+        - code
+        - name
+        - count
+    PlatformStat:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+      required:
+        - name
+        - count
+    CampaignStats:
+      type: object
+      properties:
+        total_campaigns:
+          type: number
+        avg_payout:
+          type: number
+        max_payout:
+          type: number
+        min_payout:
+          type: number
+        incentive_count:
+          type: number
+        non_incentive_count:
+          type: number
+        by_category:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryStat"
+        by_country:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryStat"
+        by_platform:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformStat"
+      required:
+        - total_campaigns
+        - avg_payout
+        - max_payout
+        - min_payout
+        - incentive_count
+        - non_incentive_count
+        - by_category
+        - by_country
+        - by_platform

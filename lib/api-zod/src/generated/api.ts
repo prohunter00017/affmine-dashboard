@@ -14,3 +14,82 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Proxy to AffMine getCampaigns API with optional filters
+ * @summary Get all campaigns
+ */
+export const GetCampaignsQueryParams = zod.object({
+  aff_id: zod.coerce.string(),
+  api_key: zod.coerce.string(),
+  offer_status: zod.coerce.string().optional(),
+  countries: zod.coerce.string().optional(),
+  platform: zod.coerce.string().optional(),
+  category: zod.coerce.string().optional(),
+  incentive: zod.coerce.string().optional(),
+  start_row: zod.coerce.string().optional(),
+  limit_row: zod.coerce.string().optional(),
+});
+
+export const GetCampaignsResponse = zod.object({
+  total: zod.number(),
+  campaigns: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      payout: zod.string(),
+      payout_type: zod.string(),
+      currency: zod.string(),
+      preview_url: zod.string().nullable(),
+      tracking_url: zod.string(),
+      description: zod.string().nullable(),
+      countries: zod.array(
+        zod.object({
+          code: zod.string(),
+          name: zod.string(),
+        }),
+      ),
+      platforms: zod.array(zod.string()),
+      category: zod.string(),
+      incentive: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * Returns aggregated statistics across all campaigns
+ * @summary Get campaign statistics
+ */
+export const GetCampaignStatsQueryParams = zod.object({
+  aff_id: zod.coerce.string(),
+  api_key: zod.coerce.string(),
+});
+
+export const GetCampaignStatsResponse = zod.object({
+  total_campaigns: zod.number(),
+  avg_payout: zod.number(),
+  max_payout: zod.number(),
+  min_payout: zod.number(),
+  incentive_count: zod.number(),
+  non_incentive_count: zod.number(),
+  by_category: zod.array(
+    zod.object({
+      name: zod.string(),
+      count: zod.number(),
+      avg_payout: zod.number(),
+    }),
+  ),
+  by_country: zod.array(
+    zod.object({
+      code: zod.string(),
+      name: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  by_platform: zod.array(
+    zod.object({
+      name: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+});

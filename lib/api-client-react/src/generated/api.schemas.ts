@@ -8,3 +8,80 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ApiError {
+  error: string;
+}
+
+export interface CountryEntry {
+  code: string;
+  name: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  payout: string;
+  payout_type: string;
+  currency: string;
+  /** @nullable */
+  preview_url: string | null;
+  tracking_url: string;
+  /** @nullable */
+  description: string | null;
+  countries: CountryEntry[];
+  platforms: string[];
+  category: string;
+  incentive: string;
+}
+
+export interface CampaignsResponse {
+  total: number;
+  campaigns: Campaign[];
+}
+
+export interface CategoryStat {
+  name: string;
+  count: number;
+  avg_payout: number;
+}
+
+export interface CountryStat {
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface PlatformStat {
+  name: string;
+  count: number;
+}
+
+export interface CampaignStats {
+  total_campaigns: number;
+  avg_payout: number;
+  max_payout: number;
+  min_payout: number;
+  incentive_count: number;
+  non_incentive_count: number;
+  by_category: CategoryStat[];
+  by_country: CountryStat[];
+  by_platform: PlatformStat[];
+}
+
+export type GetCampaignsParams = {
+  aff_id: string;
+  api_key: string;
+  offer_status?: string;
+  countries?: string;
+  platform?: string;
+  category?: string;
+  incentive?: string;
+  start_row?: string;
+  limit_row?: string;
+};
+
+export type GetCampaignStatsParams = {
+  aff_id: string;
+  api_key: string;
+};
