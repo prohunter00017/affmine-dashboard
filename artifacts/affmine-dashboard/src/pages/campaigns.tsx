@@ -14,7 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 
 function exportCsv(campaigns: Campaign[]) {
-  const headers = ["ID", "Name", "Payout", "Payout Type", "Currency", "Category", "Countries", "Platforms", "Incentive", "Tracking URL"];
+  const headers = ["ID", "Name", "Description", "Payout", "Payout Type", "Currency", "Category", "Countries", "Platforms", "Incentive", "Preview URL", "Tracking URL"];
   const escapeField = (val: string) => {
     if (val.includes(",") || val.includes('"') || val.includes("\n")) {
       return `"${val.replace(/"/g, '""')}"`;
@@ -24,6 +24,7 @@ function exportCsv(campaigns: Campaign[]) {
   const rows = campaigns.map((c) => [
     c.id,
     c.name,
+    c.description,
     c.payout,
     c.payout_type,
     c.currency,
@@ -31,6 +32,7 @@ function exportCsv(campaigns: Campaign[]) {
     c.countries.map((co) => `${co.code} (${co.name})`).join("; "),
     c.platforms.join("; "),
     c.incentive,
+    c.preview_url,
     c.tracking_url,
   ].map((v) => escapeField(String(v ?? ""))));
 
