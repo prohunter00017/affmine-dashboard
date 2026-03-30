@@ -50,6 +50,15 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
+### `artifacts/affmine-dashboard` (`@workspace/affmine-dashboard`)
+
+React + Vite dark-themed dashboard for the AffMine Publisher API. Uses `@workspace/api-client-react` generated hooks.
+
+- Pages: Dashboard (`/`), Campaign Browser (`/campaigns`), Analytics (`/analytics`), Settings (`/settings`)
+- Credentials stored in localStorage via `src/hooks/use-credentials.ts` (affmine_aff_id, affmine_api_key)
+- UI: shadcn/ui components, Tailwind CSS, dark theme with green accent
+- Depends on: `@workspace/api-client-react`
+
 ### `artifacts/api-server` (`@workspace/api-server`)
 
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
@@ -57,7 +66,8 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
+- Campaign routes: `src/routes/campaigns.ts` — proxies to AffMine Publisher API (`https://network.affmine.com/api/v1/getCampaigns`), parses XML responses using `fast-xml-parser`, returns normalized JSON. Endpoints: `GET /api/campaigns` (with filters), `GET /api/campaigns/stats` (aggregated stats)
+- Depends on: `@workspace/db`, `@workspace/api-zod`, `fast-xml-parser`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
 - Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
