@@ -8,11 +8,13 @@
 
 export * from "./apiError";
 export * from "./campaign";
+export * from "./campaignFilterOptions";
 export * from "./campaignsResponse";
 export * from "./campaignStats";
 export * from "./categoryStat";
 export * from "./countryEntry";
 export * from "./countryStat";
+export * from "./getCampaignFilterOptionsParams";
 export * from "./getCampaignsParams";
 export * from "./getCampaignStatsParams";
 export * from "./healthStatus";

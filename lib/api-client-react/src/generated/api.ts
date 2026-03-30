@@ -15,8 +15,10 @@ import type {
 
 import type {
   ApiError,
+  CampaignFilterOptions,
   CampaignStats,
   CampaignsResponse,
+  GetCampaignFilterOptionsParams,
   GetCampaignStatsParams,
   GetCampaignsParams,
   HealthStatus,
@@ -194,6 +196,113 @@ export function useGetCampaigns<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCampaignsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns distinct countries and categories for populating filter dropdowns
+ * @summary Get filter options
+ */
+export const getGetCampaignFilterOptionsUrl = (
+  params: GetCampaignFilterOptionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/filter-options?${stringifiedParams}`
+    : `/api/campaigns/filter-options`;
+};
+
+export const getCampaignFilterOptions = async (
+  params: GetCampaignFilterOptionsParams,
+  options?: RequestInit,
+): Promise<CampaignFilterOptions> => {
+  return customFetch<CampaignFilterOptions>(
+    getGetCampaignFilterOptionsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignFilterOptionsQueryKey = (
+  params?: GetCampaignFilterOptionsParams,
+) => {
+  return [
+    `/api/campaigns/filter-options`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCampaignFilterOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignFilterOptions>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignFilterOptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignFilterOptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCampaignFilterOptionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignFilterOptions>>
+  > = ({ signal }) =>
+    getCampaignFilterOptions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignFilterOptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignFilterOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignFilterOptions>>
+>;
+export type GetCampaignFilterOptionsQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get filter options
+ */
+
+export function useGetCampaignFilterOptions<
+  TData = Awaited<ReturnType<typeof getCampaignFilterOptions>>,
+  TError = ErrorType<ApiError>,
+>(
+  params: GetCampaignFilterOptionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignFilterOptions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignFilterOptionsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -1,13 +1,48 @@
-import { useState } from "react";
-import { useGetCampaigns, getGetCampaignsQueryKey } from "@workspace/api-client-react";
+import { useState, useEffect } from "react";
+import { useGetCampaigns, getGetCampaignsQueryKey, useGetCampaignFilterOptions, getGetCampaignFilterOptionsQueryKey } from "@workspace/api-client-react";
+import type { Campaign } from "@workspace/api-client-react";
 import { useCredentials } from "@/hooks/use-credentials";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, ArrowRight, Image as ImageIcon } from "lucide-react";
+import { Filter, ArrowRight, Image as ImageIcon, Check, ChevronsUpDown, Download, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
+function exportCsv(campaigns: Campaign[]) {
+  const headers = ["ID", "Name", "Payout", "Payout Type", "Currency", "Category", "Countries", "Platforms", "Incentive", "Tracking URL"];
+  const escapeField = (val: string) => {
+    if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+      return `"${val.replace(/"/g, '""')}"`;
+    }
+    return val;
+  };
+  const rows = campaigns.map((c) => [
+    c.id,
+    c.name,
+    c.payout,
+    c.payout_type,
+    c.currency,
+    c.category,
+    c.countries.map((co) => `${co.code} (${co.name})`).join("; "),
+    c.platforms.join("; "),
+    c.incentive,
+    c.tracking_url,
+  ].map((v) => escapeField(String(v ?? ""))));
+
+  const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `campaigns_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Campaigns() {
   const { affId, apiKey, hasCredentials } = useCredentials();
@@ -16,21 +51,21 @@ export default function Campaigns() {
 
   const [filters, setFilters] = useState({
     offer_status: "",
-    countries: "",
     platform: "",
     category: "",
     incentive: "",
   });
 
-  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
   const queryParams = {
     aff_id: affId,
     api_key: apiKey,
-    start_row: (page * rowsPerPage).toString(),
-    limit_row: rowsPerPage.toString(),
     ...(filters.offer_status && { offer_status: filters.offer_status }),
-    ...(filters.countries && { countries: filters.countries }),
+    ...(selectedCountries.length > 0 && { countries: selectedCountries.join(",") }),
     ...(filters.platform && { platform: filters.platform }),
     ...(filters.category && { category: filters.category }),
     ...(filters.incentive && { incentive: filters.incentive }),
@@ -44,9 +79,37 @@ export default function Campaigns() {
     },
   });
 
+  const { data: filterOptions } = useGetCampaignFilterOptions(
+    { aff_id: affId, api_key: apiKey },
+    {
+      query: {
+        enabled: hasCredentials,
+        queryKey: getGetCampaignFilterOptionsQueryKey({ aff_id: affId, api_key: apiKey }),
+        staleTime: 5 * 60 * 1000,
+      },
+    }
+  );
+
+  const allCampaigns = data?.campaigns ?? [];
+  const totalPages = Math.max(1, Math.ceil(allCampaigns.length / rowsPerPage));
+  const paginatedCampaigns = allCampaigns.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+  useEffect(() => {
+    if (page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [page, totalPages]);
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value === "all" ? "" : value }));
-    setPage(0); // Reset pagination on filter
+    setPage(0);
+  };
+
+  const toggleCountry = (code: string) => {
+    setSelectedCountries((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+    setPage(0);
   };
 
   if (!hasCredentials) {
@@ -99,23 +162,97 @@ export default function Campaigns() {
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Category</label>
-          <Input 
-            placeholder="e.g. Finance" 
-            className="bg-background"
-            value={filters.category}
-            onChange={(e) => handleFilterChange("category", e.target.value)}
-          />
+          <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" aria-expanded={categoryOpen} className="w-full justify-between bg-background font-normal">
+                {filters.category || "All"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search categories..." />
+                <CommandList>
+                  <CommandEmpty>No categories found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="__all__"
+                      onSelect={() => {
+                        handleFilterChange("category", "all");
+                        setCategoryOpen(false);
+                      }}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", !filters.category ? "opacity-100" : "opacity-0")} />
+                      All
+                    </CommandItem>
+                    {(filterOptions?.categories ?? []).map((cat) => (
+                      <CommandItem
+                        key={cat}
+                        value={cat}
+                        onSelect={() => {
+                          handleFilterChange("category", cat);
+                          setCategoryOpen(false);
+                        }}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", filters.category === cat ? "opacity-100" : "opacity-0")} />
+                        {cat}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Country Code</label>
-          <Input 
-            placeholder="e.g. US" 
-            className="bg-background uppercase"
-            maxLength={2}
-            value={filters.countries}
-            onChange={(e) => handleFilterChange("countries", e.target.value)}
-          />
+          <label className="text-xs font-medium text-muted-foreground">Country</label>
+          <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" aria-expanded={countryOpen} className="w-full justify-between bg-background font-normal">
+                <span className="truncate">
+                  {selectedCountries.length === 0
+                    ? "All"
+                    : selectedCountries.length === 1
+                      ? (filterOptions?.countries?.find((c) => c.code === selectedCountries[0])?.name ?? selectedCountries[0])
+                      : `${selectedCountries.length} selected`}
+                </span>
+                {selectedCountries.length > 0 ? (
+                  <X
+                    className="ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCountries([]);
+                      setPage(0);
+                    }}
+                  />
+                ) : (
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[250px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search countries..." />
+                <CommandList>
+                  <CommandEmpty>No countries found.</CommandEmpty>
+                  <CommandGroup>
+                    {(filterOptions?.countries ?? []).map((country) => (
+                      <CommandItem
+                        key={country.code}
+                        value={`${country.code} ${country.name}`}
+                        onSelect={() => toggleCountry(country.code)}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", selectedCountries.includes(country.code) ? "opacity-100" : "opacity-0")} />
+                        <span className="font-mono text-xs mr-2">{country.code}</span>
+                        {country.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="space-y-1.5">
@@ -130,6 +267,18 @@ export default function Campaigns() {
               <SelectItem value="no">No</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-1.5 flex items-end">
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            disabled={allCampaigns.length === 0}
+            onClick={() => exportCsv(allCampaigns)}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
@@ -166,7 +315,7 @@ export default function Campaigns() {
                     Failed to load campaigns. Check your API credentials.
                   </td>
                 </tr>
-              ) : data?.campaigns?.length === 0 ? (
+              ) : paginatedCampaigns.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-16 text-center text-muted-foreground">
                     <Filter className="mx-auto h-8 w-8 mb-3 opacity-20" />
@@ -174,7 +323,7 @@ export default function Campaigns() {
                   </td>
                 </tr>
               ) : (
-                data?.campaigns?.map((campaign) => (
+                paginatedCampaigns.map((campaign) => (
                   <tr key={campaign.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{campaign.id}</td>
                     <td className="px-4 py-3 font-medium max-w-[250px] truncate" title={campaign.name}>
@@ -226,10 +375,13 @@ export default function Campaigns() {
           </table>
         </div>
         
-        {/* Pagination */}
         <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
           <div className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{data?.campaigns?.length || 0}</span> rows
+            Showing <span className="font-medium text-foreground">{paginatedCampaigns.length}</span> of{" "}
+            <span className="font-medium text-foreground">{allCampaigns.length}</span> rows
+            {totalPages > 1 && (
+              <span className="ml-2">(Page {page + 1} of {totalPages})</span>
+            )}
           </div>
           <div className="flex gap-2">
             <Button 
@@ -244,7 +396,7 @@ export default function Campaigns() {
               variant="outline" 
               size="sm" 
               onClick={() => setPage(p => p + 1)}
-              disabled={!data || data.campaigns.length < rowsPerPage || isLoading}
+              disabled={page >= totalPages - 1 || isLoading}
             >
               Next
             </Button>
@@ -312,7 +464,7 @@ export default function Campaigns() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">Target Countries</h4>
                     <div className="flex flex-wrap gap-1">
-                      {selectedCampaign.countries.map((c: any) => (
+                      {selectedCampaign.countries.map((c) => (
                         <Badge key={c.code} variant="secondary" className="bg-background border border-border">
                           {c.code} - {c.name}
                         </Badge>
@@ -344,7 +496,6 @@ export default function Campaigns() {
                       className="shrink-0"
                       onClick={() => {
                         navigator.clipboard.writeText(selectedCampaign.tracking_url);
-                        // In a real app we'd use toast here
                       }}
                     >
                       Copy

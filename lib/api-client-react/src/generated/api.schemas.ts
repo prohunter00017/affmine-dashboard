@@ -35,6 +35,11 @@ export interface Campaign {
   incentive: string;
 }
 
+export interface CampaignFilterOptions {
+  countries: CountryEntry[];
+  categories: string[];
+}
+
 export interface CampaignsResponse {
   total: number;
   campaigns: Campaign[];
@@ -79,6 +84,11 @@ export type GetCampaignsParams = {
   incentive?: string;
   start_row?: string;
   limit_row?: string;
+};
+
+export type GetCampaignFilterOptionsParams = {
+  aff_id: string;
+  api_key: string;
 };
 
 export type GetCampaignStatsParams = {

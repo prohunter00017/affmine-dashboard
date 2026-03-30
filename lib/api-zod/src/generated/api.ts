@@ -57,6 +57,25 @@ export const GetCampaignsResponse = zod.object({
 });
 
 /**
+ * Returns distinct countries and categories for populating filter dropdowns
+ * @summary Get filter options
+ */
+export const GetCampaignFilterOptionsQueryParams = zod.object({
+  aff_id: zod.coerce.string(),
+  api_key: zod.coerce.string(),
+});
+
+export const GetCampaignFilterOptionsResponse = zod.object({
+  countries: zod.array(
+    zod.object({
+      code: zod.string(),
+      name: zod.string(),
+    }),
+  ),
+  categories: zod.array(zod.string()),
+});
+
+/**
  * Returns aggregated statistics across all campaigns
  * @summary Get campaign statistics
  */

@@ -2,8 +2,10 @@ import { Router, type IRouter } from "express";
 import {
   GetCampaignsQueryParams,
   GetCampaignStatsQueryParams,
+  GetCampaignFilterOptionsQueryParams,
   GetCampaignsResponse,
   GetCampaignStatsResponse,
+  GetCampaignFilterOptionsResponse,
 } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 import { XMLParser } from "fast-xml-parser";
@@ -360,6 +362,42 @@ async function fetchCampaigns(
   return { total: result.total, campaigns: result.campaigns };
 }
 
+const PAGE_SIZE = 500;
+
+async function fetchAllCampaigns(
+  affId: string,
+  apiKey: string,
+  filterParams: Record<string, string | undefined>,
+): Promise<{ total: number; campaigns: ParsedCampaign[] }> {
+  const allCampaigns: ParsedCampaign[] = [];
+  let reportedTotal = 0;
+  let page = 0;
+
+  while (true) {
+    const params = {
+      ...filterParams,
+      start_row: String(page * PAGE_SIZE),
+      limit_row: String(PAGE_SIZE),
+    };
+    const result = await fetchCampaigns(affId, apiKey, params);
+    reportedTotal = result.total;
+    allCampaigns.push(...result.campaigns);
+
+    if (result.campaigns.length < PAGE_SIZE) {
+      break;
+    }
+
+    if (reportedTotal > 0 && allCampaigns.length >= reportedTotal) {
+      break;
+    }
+
+    page++;
+  }
+
+  logger.info({ fetched: allCampaigns.length, reportedTotal }, "Fetched all campaigns via pagination");
+  return { total: reportedTotal, campaigns: allCampaigns };
+}
+
 router.get("/campaigns", async (req, res): Promise<void> => {
   const parsed = GetCampaignsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -367,10 +405,15 @@ router.get("/campaigns", async (req, res): Promise<void> => {
     return;
   }
 
-  const { aff_id, api_key, ...filters } = parsed.data;
+  const { aff_id, api_key, start_row, limit_row, ...filters } = parsed.data;
 
   try {
-    const result = await fetchCampaigns(aff_id, api_key, filters);
+    let result;
+    if (start_row || limit_row) {
+      result = await fetchCampaigns(aff_id, api_key, { ...filters, start_row, limit_row });
+    } else {
+      result = await fetchAllCampaigns(aff_id, api_key, filters);
+    }
     res.json(GetCampaignsResponse.parse(result));
   } catch (err: unknown) {
     const e = err as Error & { status?: number };
@@ -463,6 +506,46 @@ router.get("/campaigns/stats", async (req, res): Promise<void> => {
   } catch (err: unknown) {
     const e = err as Error & { status?: number };
     req.log.warn({ err: e.message }, "Campaign stats fetch failed");
+    res.status(e.status ?? 500).json({ error: e.message });
+  }
+});
+
+router.get("/campaigns/filter-options", async (req, res): Promise<void> => {
+  const parsed = GetCampaignFilterOptionsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { aff_id, api_key } = parsed.data;
+
+  try {
+    const { campaigns } = await fetchAllCampaigns(aff_id, api_key, {});
+
+    const countryMap = new Map<string, string>();
+    const categorySet = new Set<string>();
+
+    for (const c of campaigns) {
+      for (const co of c.countries) {
+        if (co.code && !countryMap.has(co.code)) {
+          countryMap.set(co.code, co.name);
+        }
+      }
+      if (c.category && c.category !== "Unknown") {
+        categorySet.add(c.category);
+      }
+    }
+
+    const countries = Array.from(countryMap.entries())
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const categories = Array.from(categorySet).sort();
+
+    res.json(GetCampaignFilterOptionsResponse.parse({ countries, categories }));
+  } catch (err: unknown) {
+    const e = err as Error & { status?: number };
+    req.log.warn({ err: e.message }, "Filter options fetch failed");
     res.status(e.status ?? 500).json({ error: e.message });
   }
 });

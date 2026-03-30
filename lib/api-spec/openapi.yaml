@@ -96,6 +96,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /campaigns/filter-options:
+    get:
+      operationId: getCampaignFilterOptions
+      tags: [campaigns]
+      summary: Get filter options
+      description: Returns distinct countries and categories for populating filter dropdowns
+      parameters:
+        - name: aff_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filter options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignFilterOptions"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /campaigns/stats:
     get:
       operationId: getCampaignStats
@@ -202,6 +238,20 @@ components:
       required:
         - code
         - name
+    CampaignFilterOptions:
+      type: object
+      properties:
+        countries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryEntry"
+        categories:
+          type: array
+          items:
+            type: string
+      required:
+        - countries
+        - categories
     CampaignsResponse:
       type: object
       properties:
