@@ -1,3 +1,5 @@
+/** Top-level API router — mounts all sub-routers under /api. */
+
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import campaignsRouter from "./campaigns";

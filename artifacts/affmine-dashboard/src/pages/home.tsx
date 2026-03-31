@@ -1,4 +1,13 @@
+/**
+ * Dashboard overview page.
+ *
+ * Shows high-level KPI cards (total campaigns, average payout, top category,
+ * top platform) fetched from the `/api/campaigns/stats` endpoint, plus a
+ * preview table of the 5 most-recent campaigns.
+ */
+
 import { useGetCampaignStats, useGetCampaigns, getGetCampaignStatsQueryKey, getGetCampaignsQueryKey } from "@workspace/api-client-react";
+import type { Campaign } from "@workspace/api-client-react";
 import { useCredentials } from "@/hooks/use-credentials";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Layers, Megaphone, MonitorSmartphone } from "lucide-react";
@@ -138,7 +147,7 @@ export default function Home() {
               </thead>
               <tbody>
                 {campaignsLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 5 }).map((_, i: number) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
@@ -154,7 +163,7 @@ export default function Home() {
                     </td>
                   </tr>
                 ) : (
-                  campaignsRes?.campaigns?.map((campaign) => (
+                  campaignsRes?.campaigns?.map((campaign: Campaign) => (
                     <tr key={campaign.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3 font-mono text-muted-foreground">{campaign.id}</td>
                       <td className="px-4 py-3 font-medium text-foreground">{campaign.name}</td>

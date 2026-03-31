@@ -1,3 +1,5 @@
+/** Server entry point — validates PORT and starts the Express server. */
+
 import app from "./app";
 import { logger } from "./lib/logger";
 

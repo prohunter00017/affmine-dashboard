@@ -1,3 +1,11 @@
+/**
+ * Root application component.
+ *
+ * Sets up React Query, the wouter router (with the Vite base path), and
+ * global providers (tooltips, toasts).  All pages are rendered inside the
+ * shared {@link Layout} component.
+ */
+
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";

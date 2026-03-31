@@ -1,3 +1,12 @@
+/**
+ * Credential management hook for AffMine API access.
+ *
+ * Stores `aff_id` and `api_key` in localStorage and exposes them reactively
+ * via `useSyncExternalStore`.  All components that call `useCredentials()`
+ * re-render immediately when credentials change, without needing a React
+ * context provider.
+ */
+
 import { useCallback, useSyncExternalStore } from "react";
 
 const AFF_ID_KEY = "affmine_aff_id";
@@ -14,7 +23,7 @@ function emitChange() {
 
 function subscribe(listener: Listener) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => { listeners.delete(listener); };
 }
 
 function getAffId() {
@@ -25,6 +34,11 @@ function getApiKey() {
   return localStorage.getItem(API_KEY_KEY) || "";
 }
 
+/**
+ * Hook that provides the current AffMine credentials and a setter.
+ *
+ * @returns affId, apiKey, hasCredentials flag, and saveCredentials function.
+ */
 export function useCredentials() {
   const affId = useSyncExternalStore(subscribe, getAffId, () => "");
   const apiKey = useSyncExternalStore(subscribe, getApiKey, () => "");

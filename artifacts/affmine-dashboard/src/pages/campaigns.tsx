@@ -1,6 +1,14 @@
+/**
+ * Campaign Browser page.
+ *
+ * Lists all AffMine campaigns with filters for status, platform, category,
+ * country, and incentive.  Supports client-side pagination and CSV export
+ * of the full (filtered) result set.  Clicking a row opens a detail dialog.
+ */
+
 import { useState, useEffect } from "react";
 import { useGetCampaigns, getGetCampaignsQueryKey, useGetCampaignFilterOptions, getGetCampaignFilterOptionsQueryKey } from "@workspace/api-client-react";
-import type { Campaign } from "@workspace/api-client-react";
+import type { Campaign, CountryEntry, CampaignsResponse } from "@workspace/api-client-react";
 import { useCredentials } from "@/hooks/use-credentials";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+/** Build a CSV string from the given campaigns and trigger a browser download. */
 function exportCsv(campaigns: Campaign[]) {
   const headers = ["ID", "Name", "Description", "Payout", "Payout Type", "Currency", "Category", "Countries", "Platforms", "Incentive", "Preview URL", "Tracking URL"];
   const escapeField = (val: string) => {
@@ -21,7 +30,7 @@ function exportCsv(campaigns: Campaign[]) {
     }
     return val;
   };
-  const rows = campaigns.map((c) => [
+  const rows = campaigns.map((c: Campaign) => [
     c.id,
     c.name,
     c.description,
@@ -29,14 +38,14 @@ function exportCsv(campaigns: Campaign[]) {
     c.payout_type,
     c.currency,
     c.category,
-    c.countries.map((co) => `${co.code} (${co.name})`).join("; "),
+    c.countries.map((co: CountryEntry) => `${co.code} (${co.name})`).join("; "),
     c.platforms.join("; "),
     c.incentive,
     c.preview_url,
     c.tracking_url,
   ].map((v) => escapeField(String(v ?? ""))));
 
-  const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const csv = [headers.join(","), ...rows.map((r: string[]) => r.join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -77,7 +86,7 @@ export default function Campaigns() {
     query: {
       enabled: hasCredentials,
       queryKey: getGetCampaignsQueryKey(queryParams),
-      keepPreviousData: true,
+      placeholderData: (prev: CampaignsResponse | undefined) => prev,
     },
   });
 
@@ -109,7 +118,7 @@ export default function Campaigns() {
 
   const toggleCountry = (code: string) => {
     setSelectedCountries((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+      prev.includes(code) ? prev.filter((c: string) => c !== code) : [...prev, code]
     );
     setPage(0);
   };
@@ -134,7 +143,7 @@ export default function Campaigns() {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 bg-card p-4 rounded-lg border border-border">
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Status</label>
-          <Select value={filters.offer_status || "all"} onValueChange={(v) => handleFilterChange("offer_status", v)}>
+          <Select value={filters.offer_status || "all"} onValueChange={(v: string) => handleFilterChange("offer_status", v)}>
             <SelectTrigger className="bg-background">
               <SelectValue placeholder="All" />
             </SelectTrigger>
@@ -149,7 +158,7 @@ export default function Campaigns() {
         
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Platform</label>
-          <Select value={filters.platform || "all"} onValueChange={(v) => handleFilterChange("platform", v)}>
+          <Select value={filters.platform || "all"} onValueChange={(v: string) => handleFilterChange("platform", v)}>
             <SelectTrigger className="bg-background">
               <SelectValue placeholder="All" />
             </SelectTrigger>
@@ -187,7 +196,7 @@ export default function Campaigns() {
                       <Check className={cn("mr-2 h-4 w-4", !filters.category ? "opacity-100" : "opacity-0")} />
                       All
                     </CommandItem>
-                    {(filterOptions?.categories ?? []).map((cat) => (
+                    {(filterOptions?.categories ?? []).map((cat: string) => (
                       <CommandItem
                         key={cat}
                         value={cat}
@@ -216,13 +225,13 @@ export default function Campaigns() {
                   {selectedCountries.length === 0
                     ? "All"
                     : selectedCountries.length === 1
-                      ? (filterOptions?.countries?.find((c) => c.code === selectedCountries[0])?.name ?? selectedCountries[0])
+                      ? (filterOptions?.countries?.find((c: CountryEntry) => c.code === selectedCountries[0])?.name ?? selectedCountries[0])
                       : `${selectedCountries.length} selected`}
                 </span>
                 {selectedCountries.length > 0 ? (
                   <X
                     className="ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       setSelectedCountries([]);
                       setPage(0);
@@ -239,7 +248,7 @@ export default function Campaigns() {
                 <CommandList>
                   <CommandEmpty>No countries found.</CommandEmpty>
                   <CommandGroup>
-                    {(filterOptions?.countries ?? []).map((country) => (
+                    {(filterOptions?.countries ?? []).map((country: CountryEntry) => (
                       <CommandItem
                         key={country.code}
                         value={`${country.code} ${country.name}`}
@@ -259,7 +268,7 @@ export default function Campaigns() {
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Incentive</label>
-          <Select value={filters.incentive || "all"} onValueChange={(v) => handleFilterChange("incentive", v)}>
+          <Select value={filters.incentive || "all"} onValueChange={(v: string) => handleFilterChange("incentive", v)}>
             <SelectTrigger className="bg-background">
               <SelectValue placeholder="All" />
             </SelectTrigger>
@@ -300,7 +309,7 @@ export default function Campaigns() {
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: 10 }).map((_, i: number) => (
                   <tr key={i} className="border-b border-border/50">
                     <td className="px-4 py-4"><Skeleton className="h-4 w-12" /></td>
                     <td className="px-4 py-4"><Skeleton className="h-4 w-48" /></td>
@@ -325,7 +334,7 @@ export default function Campaigns() {
                   </td>
                 </tr>
               ) : (
-                paginatedCampaigns.map((campaign) => (
+                paginatedCampaigns.map((campaign: Campaign) => (
                   <tr key={campaign.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{campaign.id}</td>
                     <td className="px-4 py-3 font-medium max-w-[250px] truncate" title={campaign.name}>
@@ -340,7 +349,7 @@ export default function Campaigns() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap max-w-[120px]">
-                        {campaign.countries.slice(0, 3).map(c => (
+                        {campaign.countries.slice(0, 3).map((c: CountryEntry) => (
                           <span key={c.code} className="text-xs border border-border px-1 rounded bg-background" title={c.name}>
                             {c.code}
                           </span>
@@ -352,7 +361,7 @@ export default function Campaigns() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        {campaign.platforms.map(p => (
+                        {campaign.platforms.map((p: string) => (
                           <span key={p} className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             {p}
                           </span>
@@ -389,7 +398,7 @@ export default function Campaigns() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setPage(p => Math.max(0, p - 1))}
+              onClick={() => setPage((p: number) => Math.max(0, p - 1))}
               disabled={page === 0 || isLoading}
             >
               Previous
@@ -397,7 +406,7 @@ export default function Campaigns() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage((p: number) => p + 1)}
               disabled={page >= totalPages - 1 || isLoading}
             >
               Next
@@ -406,7 +415,7 @@ export default function Campaigns() {
         </div>
       </div>
 
-      <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
+      <Dialog open={!!selectedCampaign} onOpenChange={(open: boolean) => !open && setSelectedCampaign(null)}>
         <DialogContent className="max-w-2xl bg-card border-border">
           {selectedCampaign && (
             <>
@@ -428,7 +437,7 @@ export default function Campaigns() {
                       src={selectedCampaign.preview_url} 
                       alt="Preview" 
                       className="object-contain w-full h-full"
-                      onError={(e) => {
+                      onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                         (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                       }}
@@ -466,7 +475,7 @@ export default function Campaigns() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">Target Countries</h4>
                     <div className="flex flex-wrap gap-1">
-                      {selectedCampaign.countries.map((c) => (
+                      {selectedCampaign.countries.map((c: CountryEntry) => (
                         <Badge key={c.code} variant="secondary" className="bg-background border border-border">
                           {c.code} - {c.name}
                         </Badge>

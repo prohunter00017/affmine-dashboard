@@ -1,3 +1,5 @@
+/** Health-check endpoint used by the frontend to verify proxy connectivity. */
+
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
 

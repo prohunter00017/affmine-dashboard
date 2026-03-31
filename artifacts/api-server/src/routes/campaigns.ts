@@ -1,3 +1,13 @@
+/**
+ * Campaign routes — proxies requests to the AffMine Publisher API,
+ * normalises the response into a consistent JSON shape, and exposes
+ * three endpoints:
+ *
+ *   GET /api/campaigns           — list campaigns (with optional filters)
+ *   GET /api/campaigns/stats     — aggregated statistics
+ *   GET /api/campaigns/filter-options — available filter values
+ */
+
 import { Router, type IRouter } from "express";
 import {
   GetCampaignsQueryParams,
@@ -12,6 +22,7 @@ import { XMLParser } from "fast-xml-parser";
 
 const router: IRouter = Router();
 
+/** XML parser configured for the AffMine response format. */
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -21,6 +32,7 @@ const xmlParser = new XMLParser({
   },
 });
 
+/** Maps numeric platform IDs used by AffMine to human-readable names. */
 const PLATFORM_MAP: Record<string, string> = {
   "1": "Windows",
   "2": "Mac",
@@ -33,6 +45,7 @@ function normalizePlatform(p: string): string {
   return PLATFORM_MAP[p.trim()] ?? p.trim();
 }
 
+/** Shape of a campaign after normalisation. */
 interface ParsedCampaign {
   id: string;
   name: string;
@@ -48,6 +61,7 @@ interface ParsedCampaign {
   incentive: string;
 }
 
+/** Parse a single country object from any of the formats AffMine uses. */
 function parseSingleCountry(co: unknown): { code: string; name: string } | null {
   if (typeof co === "string") return { code: co.trim(), name: co.trim() };
   if (co && typeof co === "object") {
@@ -59,6 +73,10 @@ function parseSingleCountry(co: unknown): { code: string; name: string } | null 
   return null;
 }
 
+/**
+ * Parse a country field that may be an array, a comma-separated string,
+ * or a nested `{ country: ... }` wrapper (single or array).
+ */
 function parseCountries(raw: unknown): Array<{ code: string; name: string }> {
   if (!raw) return [];
 
@@ -90,6 +108,7 @@ function parseCountries(raw: unknown): Array<{ code: string; name: string }> {
   return [];
 }
 
+/** Extract text from a possibly-wrapped XML/JSON node. */
 function extractTextValue(node: unknown): string {
   if (node == null) return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -100,6 +119,7 @@ function extractTextValue(node: unknown): string {
   return "";
 }
 
+/** Parse platform data that may arrive as an array, CSV string, or number. */
 function parsePlatforms(raw: unknown): string[] {
   if (!raw) return [];
 
@@ -118,6 +138,7 @@ function parsePlatforms(raw: unknown): string[] {
   return [];
 }
 
+/** Map a raw AffMine campaign object to the normalised shape. */
 function extractCampaign(c: Record<string, unknown>): ParsedCampaign {
   const payoutRaw = c.payout ?? c.default_payout ?? c.payout_amount ?? "0";
   const payoutStr =
@@ -162,18 +183,23 @@ function extractCampaign(c: Record<string, unknown>): ParsedCampaign {
   };
 }
 
+/**
+ * Strip common envelope wrappers (e.g. `offer_feed`, `response`, `data`)
+ * so that the inner payload is at the top level.
+ */
 function unwrapRoot(obj: Record<string, unknown>): Record<string, unknown> {
   const wrapperKeys = ["offer_feed", "response", "result", "data"];
   for (const key of wrapperKeys) {
     const val = obj[key];
     if (val && typeof val === "object" && !Array.isArray(val)) {
-      logger.info({ wrapperKey: key }, "Unwrapped root object");
+      logger.debug({ wrapperKey: key }, "Unwrapped root object");
       return val as Record<string, unknown>;
     }
   }
   return obj;
 }
 
+/** Locate the campaign array inside a parsed JSON/XML object. */
 function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown>[] {
   const root = unwrapRoot(obj);
 
@@ -185,7 +211,7 @@ function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown
   for (const key of candidateKeys) {
     const val = root[key];
     if (Array.isArray(val) && val.length > 0) {
-      logger.info({ key, count: val.length }, "Found campaigns at key");
+      logger.debug({ key, count: val.length }, "Found campaigns at key");
       return val as Record<string, unknown>[];
     }
     if (val && typeof val === "object" && !Array.isArray(val)) {
@@ -193,7 +219,7 @@ function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown
       for (const subKey of candidateKeys) {
         const subVal = nested[subKey];
         if (Array.isArray(subVal) && subVal.length > 0) {
-          logger.info({ key: `${key}.${subKey}`, count: subVal.length }, "Found campaigns at nested key");
+          logger.debug({ key: `${key}.${subKey}`, count: subVal.length }, "Found campaigns at nested key");
           return subVal as Record<string, unknown>[];
         }
       }
@@ -202,7 +228,7 @@ function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown
 
   for (const [key, val] of Object.entries(root)) {
     if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object") {
-      logger.info({ key, count: val.length }, "Found campaigns array at dynamic key");
+      logger.debug({ key, count: val.length }, "Found campaigns array at dynamic key");
       return val as Record<string, unknown>[];
     }
   }
@@ -210,6 +236,10 @@ function findArrayInObject(obj: Record<string, unknown>): Record<string, unknown
   return [];
 }
 
+/**
+ * Parse a raw AffMine API response (JSON or XML) into a normalised list
+ * of campaigns.  Returns an error string when the upstream reports failure.
+ */
 function parseAffMineResponse(rawText: string): {
   total: number;
   campaigns: ParsedCampaign[];
@@ -221,16 +251,13 @@ function parseAffMineResponse(rawText: string): {
   const isXml = trimmed.startsWith("<?xml") || trimmed.startsWith("<");
 
   if (isXml) {
-    logger.info("Parsing AffMine response as XML");
+    logger.debug("Parsing AffMine response as XML");
     const xmlResult = xmlParser.parse(trimmed) as Record<string, unknown>;
-    logger.info({ xmlTopKeys: Object.keys(xmlResult) }, "XML parsed top-level keys");
 
     const root = (xmlResult.offer_feed ??
       xmlResult.response ??
       xmlResult.offers ??
       xmlResult) as Record<string, unknown>;
-
-    logger.info({ rootKeys: Object.keys(root) }, "XML root element keys");
 
     const errorId = root.error_id ?? root.errorId;
     if (errorId && Number(errorId) !== 0) {
@@ -247,11 +274,6 @@ function parseAffMineResponse(rawText: string): {
     }
 
     const items = findArrayInObject(root);
-    if (items.length > 0) {
-      logger.info({ sampleKeys: Object.keys(items[0]) }, "Sample XML campaign keys");
-      logger.info({ sample: JSON.stringify(items[0]).slice(0, 500) }, "Sample XML campaign");
-    }
-
     const campaigns = items.map(extractCampaign);
     const totalRaw = root.row_count ?? root.total_count ?? root.count ?? root.total;
     const total =
@@ -261,7 +283,7 @@ function parseAffMineResponse(rawText: string): {
 
     return { total, campaigns };
   } else {
-    logger.info("Parsing AffMine response as JSON");
+    logger.debug("Parsing AffMine response as JSON");
     try {
       parsed = JSON.parse(trimmed) as Record<string, unknown>;
     } catch {
@@ -269,10 +291,7 @@ function parseAffMineResponse(rawText: string): {
       return { total: 0, campaigns: [], error: "Failed to parse AffMine response" };
     }
 
-    logger.info({ jsonTopKeys: Object.keys(parsed) }, "JSON parsed top-level keys");
-
     const root = unwrapRoot(parsed);
-    logger.info({ rootKeys: Object.keys(root) }, "JSON root keys after unwrap");
 
     const errorId = root.error_id ?? root.errorId ?? root.error;
     if (errorId && Number(errorId) !== 0 && typeof errorId !== "object") {
@@ -289,10 +308,6 @@ function parseAffMineResponse(rawText: string): {
     }
 
     const items = findArrayInObject(parsed);
-    if (items.length > 0) {
-      logger.info({ sampleKeys: Object.keys(items[0]) }, "Sample JSON campaign keys");
-    }
-
     const campaigns = items.map(extractCampaign);
     const totalRaw = root.row_count ?? root.total_count ?? root.totalCount ?? root.count ?? root.total;
     const total =
@@ -304,6 +319,10 @@ function parseAffMineResponse(rawText: string): {
   }
 }
 
+/**
+ * Fetch a single page of campaigns from the AffMine upstream API.
+ * Throws with an appropriate HTTP status on failure.
+ */
 async function fetchCampaigns(
   affId: string,
   apiKey: string,
@@ -364,6 +383,10 @@ async function fetchCampaigns(
 
 const PAGE_SIZE = 500;
 
+/**
+ * Paginate through the upstream API until all campaigns matching
+ * the given filters have been collected.
+ */
 async function fetchAllCampaigns(
   affId: string,
   apiKey: string,
@@ -398,6 +421,7 @@ async function fetchAllCampaigns(
   return { total: reportedTotal, campaigns: allCampaigns };
 }
 
+/** GET /api/campaigns — list campaigns with optional server- and client-side filters. */
 router.get("/campaigns", async (req, res): Promise<void> => {
   const parsed = GetCampaignsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -431,6 +455,7 @@ router.get("/campaigns", async (req, res): Promise<void> => {
   }
 });
 
+/** GET /api/campaigns/stats — aggregated campaign statistics. */
 router.get("/campaigns/stats", async (req, res): Promise<void> => {
   const parsed = GetCampaignStatsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -519,6 +544,7 @@ router.get("/campaigns/stats", async (req, res): Promise<void> => {
   }
 });
 
+/** GET /api/campaigns/filter-options — distinct countries and categories. */
 router.get("/campaigns/filter-options", async (req, res): Promise<void> => {
   const parsed = GetCampaignFilterOptionsQueryParams.safeParse(req.query);
   if (!parsed.success) {

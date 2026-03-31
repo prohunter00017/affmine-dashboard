@@ -1,3 +1,11 @@
+/**
+ * Settings page for configuring AffMine API credentials.
+ *
+ * Provides form fields for `aff_id` and `api_key`, validates them by making
+ * a test API call, and persists them in localStorage via the `useCredentials`
+ * hook.  Also shows the live status of the backend proxy server.
+ */
+
 import { useState } from "react";
 import { useCredentials } from "@/hooks/use-credentials";
 import { useHealthCheck, getCampaigns } from "@workspace/api-client-react";
@@ -34,7 +42,6 @@ export default function Settings() {
     setStatus("idle");
 
     try {
-      // Validate by calling campaigns endpoint directly (bypassing react-query cache for instant validation)
       await getCampaigns({
         aff_id: formAffId,
         api_key: formApiKey,
@@ -47,8 +54,7 @@ export default function Settings() {
         title: "Credentials verified and saved",
         description: "Your AffMine dashboard is now fully functional.",
       });
-    } catch (error) {
-      console.error(error);
+    } catch {
       setStatus("error");
       toast({
         title: "Verification failed",

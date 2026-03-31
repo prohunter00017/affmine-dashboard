@@ -1,3 +1,10 @@
+/**
+ * Root layout component.
+ *
+ * Renders the sidebar navigation with links to all pages and embeds the
+ * {@link CredentialsBanner} at the top of the main content area.
+ */
+
 import { Link, useLocation } from "wouter";
 import { Activity, LayoutDashboard, List, Settings, TrendingUp } from "lucide-react";
 import { CredentialsBanner } from "./credentials-banner";

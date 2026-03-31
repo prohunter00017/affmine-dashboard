@@ -1,4 +1,15 @@
+/**
+ * Analytics page.
+ *
+ * Displays aggregate statistics from `/api/campaigns/stats`:
+ * - Summary cards (max/min payout, incentive vs non-incentive counts)
+ * - Bar chart of top 10 categories by volume
+ * - Donut chart of platform distribution
+ * - Grid of top 20 countries by campaign count
+ */
+
 import { useGetCampaignStats, getGetCampaignStatsQueryKey } from "@workspace/api-client-react";
+import type { CategoryStat, PlatformStat, CountryStat } from "@workspace/api-client-react";
 import { useCredentials } from "@/hooks/use-credentials";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,6 +17,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from "recharts";
+
+const COLORS = ['hsl(140, 100%, 45%)', 'hsl(190, 90%, 50%)', 'hsl(280, 80%, 60%)', 'hsl(40, 90%, 60%)', 'hsl(330, 80%, 60%)'];
+const CHART_TEXT = 'hsl(220, 10%, 65%)';
+const CHART_GRID = 'hsl(220, 20%, 15%)';
 
 export default function Stats() {
   const { affId, apiKey, hasCredentials } = useCredentials();
@@ -24,11 +39,6 @@ export default function Stats() {
     return <div className="p-8 text-center text-muted-foreground">Please configure settings.</div>;
   }
 
-  // Colors derived from our theme
-  const COLORS = ['hsl(140, 100%, 45%)', 'hsl(190, 90%, 50%)', 'hsl(280, 80%, 60%)', 'hsl(40, 90%, 60%)', 'hsl(330, 80%, 60%)'];
-  const CHART_TEXT = 'hsl(220, 10%, 65%)';
-  const CHART_GRID = 'hsl(220, 20%, 15%)';
-
   const categoryData = stats?.by_category?.slice(0, 10) || [];
   const platformData = stats?.by_platform || [];
 
@@ -41,7 +51,7 @@ export default function Stats() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: 4 }).map((_, i: number) => (
             <Card key={i} className="bg-card">
               <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
               <CardContent><Skeleton className="h-8 w-16" /></CardContent>
@@ -133,7 +143,7 @@ export default function Stats() {
                     dataKey="count"
                     stroke="none"
                   >
-                    {platformData.map((entry, index) => (
+                    {platformData.map((_entry: PlatformStat, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -160,7 +170,7 @@ export default function Stats() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {stats?.by_country?.slice(0, 20).map((country) => (
+                {stats?.by_country?.slice(0, 20).map((country: CountryStat) => (
                   <div key={country.code} className="flex items-center justify-between p-3 rounded-md bg-muted/30 border border-border/50">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm">{country.code}</span>

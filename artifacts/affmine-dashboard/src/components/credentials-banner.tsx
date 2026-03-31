@@ -1,3 +1,10 @@
+/**
+ * Alert banner shown when API credentials have not been configured.
+ *
+ * Appears at the top of every page except Settings, prompting the user to
+ * navigate there and enter their `aff_id` / `api_key`.
+ */
+
 import { Link, useLocation } from "wouter";
 import { AlertCircle } from "lucide-react";
 import { useCredentials } from "@/hooks/use-credentials";

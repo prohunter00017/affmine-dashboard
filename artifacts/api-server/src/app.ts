@@ -1,3 +1,10 @@
+/**
+ * Express application setup.
+ *
+ * Configures structured request logging (pino), CORS, JSON body parsing,
+ * and mounts all API routes under the `/api` prefix.
+ */
+
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
