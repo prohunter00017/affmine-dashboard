@@ -13,7 +13,6 @@ Manage campaigns, analyze performance, and export data — all from a sleek dark
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![pnpm](https://img.shields.io/badge/pnpm-Monorepo-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](#license)
 
@@ -30,13 +29,16 @@ AffMine Publisher Dashboard is a full-stack web application that connects to the
 ## Features
 
 - **Real-Time Campaign Data** — Fetches live campaign data directly from the AffMine Publisher API
-- **Advanced Filtering** — Filter campaigns by status, platform, category, country, and incentive type
-- **Campaign Browser** — Paginated table with 20 rows per page, detail dialogs, and search
+- **Advanced Filtering** — Filter campaigns by status, platform, category, country, and incentive type; searchable comboboxes and multi-select country picker
+- **Favorites** — Star any campaign to save it; toggle a Favorites-only view with a single click; count badge shown in the sidebar
+- **Saved Filter Presets** — Name and save any combination of active filters; reload or delete presets at any time
+- **LLM Export** — Export all visible campaigns as Markdown (`.md`) or JSON (`.json`) for AI-assisted analysis
 - **CSV Export** — Export all filtered campaigns to CSV with a single click
+- **Campaign Browser** — Paginated table with 20 rows per page and full-detail dialog per campaign
 - **Analytics Dashboard** — Visual breakdowns by category, platform, country, and payout statistics
 - **Dark Theme with Green Accent** — Professional UI built with Tailwind CSS and shadcn/ui
 - **Local Credential Storage** — API credentials stored in browser localStorage and sent only to your proxy server
-- **Docker Deployment** — One-command deployment with the included installer script
+- **Docker Deployment** — One-command deployment with `docker compose up --build` or the guided `install.py` script
 - **Type-Safe Architecture** — End-to-end TypeScript with auto-generated API clients via Orval
 
 ---
@@ -55,25 +57,36 @@ AffMine Publisher Dashboard is a full-stack web application that connects to the
 
 ## Quick Start with Docker
 
-The fastest way to get running. Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.6+.
+The fastest way to get running. Requires [Docker](https://docs.docker.com/get-docker/) (with Compose).
+
+### Option A — committed Docker files (recommended for developers)
 
 ```bash
 git clone https://github.com/prohunter00017/affmine-dashboard.git
 cd affmine-dashboard
-python install.py
+
+# 1. Create your credentials file
+cp .env.example .env
+# Edit .env and set AFF_ID and API_KEY
+
+# 2. Build and start all containers
+docker compose up --build
 ```
 
-The installer will:
-
-1. Detect your OS (Windows, macOS, or Linux)
-2. Verify Docker and Docker Compose are installed and running
-3. Scan for available ports (defaults: `3000`, `5000`, `5432`)
-4. Prompt for your AffMine API credentials
-5. Generate all configuration files and start the containers
-
-Once complete, open **http://localhost:3000** in your browser.
+Open **http://localhost:3000** in your browser.
 
 ```bash
+docker compose down       # Stop all containers
+docker compose logs -f    # Follow logs
+```
+
+### Option B — guided installer (recommended for non-developers)
+
+Requires Python 3.6+. Automatically detects your OS, scans for free ports, and prompts for credentials.
+
+```bash
+python install.py
+
 python install.py --status   # Check container status
 python install.py --stop     # Stop all containers
 ```
@@ -101,14 +114,14 @@ cd affmine-dashboard
 # Install all dependencies
 pnpm install
 
-# Start the API server (default port: 5000)
-pnpm --filter @workspace/api-server run dev
+# Start the API server (port 8080)
+PORT=8080 pnpm --filter @workspace/api-server run dev
 
-# In a separate terminal, start the dashboard (default port: 3000)
-pnpm --filter @workspace/affmine-dashboard run dev
+# In a separate terminal, start the dashboard (port 5173)
+PORT=5173 BASE_PATH=/ pnpm --filter @workspace/affmine-dashboard run dev
 ```
 
-Open **http://localhost:3000**, navigate to **Settings**, and enter your AffMine `aff_id` and `api_key`. Credentials are entered in-app (no `.env` file needed for local development). The dashboard will begin loading campaign data immediately.
+Open **http://localhost:5173**, navigate to **Settings**, and enter your AffMine `aff_id` and `api_key`. Credentials are entered in-app — no `.env` file is needed for local development.
 
 ### Useful Commands
 
@@ -132,8 +145,8 @@ affmine-dashboard/
 │   ├── affmine-dashboard/        # React + Vite frontend (dark theme, green accent)
 │   │   └── src/
 │   │       ├── pages/            # Dashboard, Campaigns, Analytics, Settings
-│   │       ├── components/       # Layout, credential banner, UI components
-│   │       └── hooks/            # useCredentials (cross-component reactivity)
+│   │       ├── components/       # Layout, credential banner, shadcn/ui components
+│   │       └── hooks/            # useCredentials, useFavorites, useSavedFilters
 │   └── api-server/               # Express 5 backend (API proxy)
 │       └── src/
 │           └── routes/           # Campaign, stats, filter-options, health endpoints
@@ -142,7 +155,10 @@ affmine-dashboard/
 │   ├── api-client-react/         # Auto-generated React Query hooks + fetch client
 │   ├── api-zod/                  # Auto-generated Zod validation schemas
 │   └── db/                       # Drizzle ORM schema + database connection
-├── install.py                    # Docker installer script (cross-platform)
+├── Dockerfile                    # Multi-stage Docker build (builder / api / dashboard)
+├── docker-compose.yml            # Orchestrates api, dashboard, and postgres containers
+├── .env.example                  # Template for required environment variables
+├── install.py                    # Guided Docker installer (cross-platform)
 ├── package.json                  # Monorepo root
 ├── pnpm-workspace.yaml           # Workspace configuration
 └── tsconfig.base.json            # Shared TypeScript configuration
@@ -162,7 +178,6 @@ affmine-dashboard/
 | **Language** | TypeScript 5.9 (end-to-end) |
 | **Validation** | Zod v4 (auto-generated from OpenAPI spec) |
 | **API Spec** | OpenAPI 3.1 |
-| **Database** | PostgreSQL 16 (via Drizzle ORM) |
 | **Build** | esbuild (API server), Vite (dashboard) |
 | **Monorepo** | pnpm workspaces |
 | **Deployment** | Docker, Docker Compose, nginx |
@@ -190,9 +205,12 @@ A full-featured campaign management interface:
 
 - Filter by **status**, **platform**, **category**, **country**, and **incentive** type
 - Searchable category combobox and multi-select country filter with search
+- **Favorites** — Star campaigns to save them; toggle Favorites-only view with a chip; starred count shown as a badge in the sidebar
+- **Saved Filter Presets** — Save and name any active filter combination, then load or delete it from the Presets dropdown
+- **Export for LLM** — One-click Markdown (`.md`) export of all visible campaigns; dropdown also offers JSON (`.json`) for structured data pipelines
+- **CSV Export** — Export all campaigns matching current filters
 - Client-side pagination with 20 campaigns per page
-- Click any campaign to open a **detail dialog** with full information
-- **CSV export** of all campaigns matching current filters (not just the visible page)
+- Click any campaign to open a **detail dialog** with full information, tracking link copy, and a star toggle
 
 ### Analytics (`/stats`)
 
@@ -294,25 +312,28 @@ To use the AffMine Publisher Dashboard, you need an `aff_id` and `api_key` from 
 
 ### Environment Variables
 
-When using Docker, the `install.py` script generates a `.env` file automatically:
+Copy `.env.example` to `.env` and fill in your credentials. The `install.py` script also generates this file automatically via an interactive prompt.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DASHBOARD_PORT` | Port for the dashboard UI | `3000` |
 | `API_PORT` | Port for the API server | `5000` |
 | `POSTGRES_PORT` | Port for PostgreSQL | `5432` |
-| `AFF_ID` | Your AffMine affiliate ID | *(prompted)* |
-| `API_KEY` | Your AffMine API key | *(prompted)* |
-| `DATABASE_URL` | PostgreSQL connection string | *(auto-generated)* |
+| `AFF_ID` | Your AffMine affiliate ID | *(required)* |
+| `API_KEY` | Your AffMine API key | *(required)* |
 
 ### Browser Storage
 
-In development mode (without Docker), credentials are stored in **browser localStorage**:
+In development mode (without Docker), credentials and user preferences are stored in **browser localStorage**:
 
-- `affmine_aff_id` — Your affiliate ID
-- `affmine_api_key` — Your API key
+| Key | Description |
+|-----|-------------|
+| `affmine_aff_id` | Your affiliate ID |
+| `affmine_api_key` | Your API key |
+| `affmine_favorites` | JSON array of starred campaign IDs |
+| `affmine_saved_filters` | JSON array of named filter presets |
 
-These are sent only to your local proxy server, which forwards them to the official AffMine API. No third-party services receive your credentials.
+These values are sent only to your local proxy server, which forwards credentials to the official AffMine API. No third-party services receive your credentials. Favorites and filter presets stay entirely in your browser.
 
 </details>
 

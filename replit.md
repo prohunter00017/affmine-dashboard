@@ -28,23 +28,38 @@ lib/
 ├── api-spec/              # OpenAPI 3.1 spec + Orval codegen config
 ├── api-client-react/      # Generated React Query hooks + fetch client
 ├── api-zod/               # Generated Zod schemas from OpenAPI
-└── db/                    # Drizzle ORM schema + DB connection (unused)
+└── db/                    # Drizzle ORM schema + DB connection (scaffolded, unused)
 scripts/                   # Utility scripts package
 ```
 
 ## Dashboard Pages
 
 - **Dashboard** (`/`) — KPI cards (total campaigns, avg payout, top category, top platform) + recent campaigns table
-- **Campaign Browser** (`/campaigns`) — Full campaign list with filters (status, platform, category, country, incentive), client-side pagination (20 rows/page), CSV export, and detail dialog
+- **Campaign Browser** (`/campaigns`) — Full campaign list with filters, favorites, presets, LLM export, CSV export, pagination, and detail dialog (see Key Features)
 - **Analytics** (`/stats`) — Bar chart (categories), donut chart (platforms), country grid, payout stats cards
 - **Settings** (`/settings`) — Credential form with live validation and proxy server health check
 
 ## Key Features
 
-- **Credentials**: Stored in localStorage (`affmine_aff_id`, `affmine_api_key`); managed by `useCredentials` hook using `useSyncExternalStore` for cross-component reactivity
-- **Filtering**: Status, platform, category (searchable combobox), country (multi-select with search), incentive
-- **CSV Export**: Exports all campaigns matching current filters (not just current page)
-- **Pagination**: Server-side via `fetchAllCampaigns` + client-side 20-row pages
+### Credentials
+Stored in localStorage (`affmine_aff_id`, `affmine_api_key`); managed by `useCredentials` hook using `useSyncExternalStore` for cross-component reactivity without a Context provider.
+
+### Campaign Browser filters
+Status, platform, category (searchable combobox), country (multi-select with search), incentive. Applied server-side via API query params.
+
+### Favorites
+`useFavorites` hook — `useSyncExternalStore` over `localStorage` key `affmine_favorites` (JSON array of campaign IDs). Exposes `toggleFavorite(id)`, `isFavorite(id)`, and `count`. Star column in the table row; star toggle in the detail dialog; Favorites-only chip in the filter bar; sidebar badge shows count.
+
+### Saved Filter Presets
+`useSavedFilters` hook — `useSyncExternalStore` over `localStorage` key `affmine_saved_filters` (JSON array of `{ name, filters, savedAt }`). `FilterState` captures `offer_status`, `platform`, `category`, `incentive`, `countries[]`. Save via popover, load/delete via Presets dropdown.
+
+### Exports
+- **CSV** — All visible campaigns (respects current filters and favorites-only mode), downloaded as `.csv`.
+- **LLM Markdown** — All visible campaigns rendered as structured Markdown (all fields including `preview_url`), downloaded as `.md`. Primary action on the split-button.
+- **LLM JSON** — Same dataset as structured JSON, downloaded as `.json`. Secondary option in the split-button dropdown.
+
+### Pagination
+Server-side fetch of all matching campaigns via `fetchAllCampaigns`, then client-side 20-row pages.
 
 ## API Endpoints
 
@@ -67,5 +82,24 @@ All routes are mounted under `/api`:
 - Every package extends `tsconfig.base.json` (`composite: true`)
 - Typecheck: `pnpm run typecheck` (root — builds full dependency graph)
 - API server bundle: `pnpm --filter @workspace/api-server run build` (esbuild)
-- Dashboard dev: `pnpm --filter @workspace/affmine-dashboard run dev` (Vite)
+- Dashboard dev: `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/affmine-dashboard run dev`
+- Dashboard build: `PORT=3000 BASE_PATH=/ pnpm --filter @workspace/affmine-dashboard run build`
 - Codegen: `pnpm --filter @workspace/api-spec run codegen`
+- Vite output dir: `artifacts/affmine-dashboard/dist/public/`
+
+## Docker
+
+- `Dockerfile` — multi-stage: `builder` → `api` (Node 20 slim) + `dashboard` (nginx alpine)
+- `docker-compose.yml` — orchestrates `api`, `dashboard`, and `postgres:16-alpine`
+- `.env.example` — documents `AFF_ID`, `API_KEY`, and optional port overrides
+- `install.py` — guided Python installer; generates `.env`, `Dockerfile`, and `docker-compose.yml` dynamically (alternative to committed files)
+- Vite plugins from `@replit/vite-plugin-*` are conditionally loaded only when `REPL_ID` is set — safe to build without Replit environment
+
+## Replit Workflow
+
+```
+PORT=8080 pnpm --filter @workspace/api-server run dev
+& PORT=5173 BASE_PATH=/ pnpm --filter @workspace/affmine-dashboard run dev
+```
+
+Supported Replit ports in use: 5173 (dashboard), 8080 (API).
