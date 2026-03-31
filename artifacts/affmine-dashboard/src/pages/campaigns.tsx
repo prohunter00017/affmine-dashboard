@@ -81,6 +81,7 @@ function exportLlmMarkdown(campaigns: Campaign[]) {
     if (c.description) {
       lines.push(`- **Description**: ${c.description.replace(/\n/g, " ").trim()}`);
     }
+    lines.push(`- **Preview URL**: ${c.preview_url || "—"}`);
     lines.push(`- **Tracking URL**: \`${c.tracking_url}\``);
     lines.push("");
   }
@@ -442,7 +443,8 @@ export default function Campaigns() {
                     <span className="truncate text-xs">{preset.name}</span>
                     <button
                       className="ml-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-colors"
-                      onClick={(e) => { e.stopPropagation(); deleteSavedFilter(preset.name); toast({ title: `Preset "${preset.name}" deleted` }); }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); deleteSavedFilter(preset.name); toast({ title: `Preset "${preset.name}" deleted` }); }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
