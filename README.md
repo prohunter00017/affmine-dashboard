@@ -60,7 +60,7 @@ AffMine Publisher Dashboard is a full-stack web application that connects to the
 The fastest way to get running. Requires [Docker](https://docs.docker.com/get-docker/) and Python 3.6+.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/affmine-dashboard.git
+git clone https://github.com/prohunter00017/affmine-dashboard.git
 cd affmine-dashboard
 python install.py
 ```
@@ -97,7 +97,7 @@ For local development without Docker.
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/affmine-dashboard.git
+git clone https://github.com/prohunter00017/affmine-dashboard.git
 cd affmine-dashboard
 
 # Install all dependencies
