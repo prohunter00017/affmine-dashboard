@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -57,7 +55,6 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --font-sans: var(--app-font-sans);
-  --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -123,18 +120,17 @@
   --sidebar-ring: 140 100% 45%;
 
   --app-font-sans: 'Inter', sans-serif;
-  --app-font-serif: Georgia, serif;
   --app-font-mono: 'Spline Sans Mono', Menlo, monospace;
   --radius: 0.25rem; /* Sharp, precise corners */
   
-  --shadow-2xs: 0px 2px 0px 0px rgba(0,0,0,0.2);
-  --shadow-xs: 0px 2px 0px 0px rgba(0,0,0,0.2);
-  --shadow-sm: 0px 2px 0px 0px rgba(0,0,0,0.2), 0px 1px 2px -1px rgba(0,0,0,0.2);
-  --shadow: 0px 2px 0px 0px rgba(0,0,0,0.2), 0px 1px 2px -1px rgba(0,0,0,0.2);
-  --shadow-md: 0px 2px 0px 0px rgba(0,0,0,0.2), 0px 2px 4px -1px rgba(0,0,0,0.2);
-  --shadow-lg: 0px 2px 0px 0px rgba(0,0,0,0.2), 0px 4px 6px -1px rgba(0,0,0,0.2);
-  --shadow-xl: 0px 2px 0px 0px rgba(0,0,0,0.2), 0px 8px 10px -1px rgba(0,0,0,0.2);
-  --shadow-2xl: 0px 2px 0px 0px rgba(0,0,0,0.2);
+  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.15);
+  --shadow-xs: 0px 1px 3px 0px rgba(0,0,0,0.2);
+  --shadow-sm: 0px 2px 4px -1px rgba(0,0,0,0.25);
+  --shadow: 0px 2px 6px -1px rgba(0,0,0,0.3);
+  --shadow-md: 0px 4px 8px -2px rgba(0,0,0,0.35);
+  --shadow-lg: 0px 8px 16px -4px rgba(0,0,0,0.4);
+  --shadow-xl: 0px 16px 24px -6px rgba(0,0,0,0.45);
+  --shadow-2xl: 0px 24px 40px -8px rgba(0,0,0,0.5);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
