@@ -45,13 +45,11 @@ AffMine Publisher Dashboard is a full-stack web application that connects to the
 
 | Dashboard Overview | Campaign Browser |
 |:--:|:--:|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Campaigns](docs/screenshots/campaigns.png) |
+| ![Dashboard](docs/screenshots/dashboard.jpg) | ![Campaigns](docs/screenshots/campaigns.jpg) |
 
 | Analytics & Charts | Settings |
 |:--:|:--:|
-| ![Analytics](docs/screenshots/analytics.png) | ![Settings](docs/screenshots/settings.png) |
-
-> **Note:** To add your own screenshots, create a `docs/screenshots/` directory and place PNG files named `dashboard.png`, `campaigns.png`, `analytics.png`, and `settings.png`.
+| ![Analytics](docs/screenshots/analytics.jpg) | ![Settings](docs/screenshots/settings.jpg) |
 
 ---
 
@@ -336,6 +334,7 @@ Contributions are welcome! Here's how to get started:
 - Follow existing code style and TypeScript conventions
 - Add JSDoc comments to new exported functions
 - Test your changes with real AffMine API credentials when possible
+- Questions? Reach out on [LinkedIn](https://www.linkedin.com/in/don7amza/)
 
 ---
 
@@ -349,6 +348,6 @@ This project is licensed under the MIT License.
 
 **Built for the [AffMine](https://www.affmine.com/r/43326) publisher community**
 
-[Get Your API Keys](https://www.affmine.com/r/43326) | [Report a Bug](../../issues) | [Request a Feature](../../issues)
+[Get Your API Keys](https://www.affmine.com/r/43326) | [Report a Bug](https://www.linkedin.com/in/don7amza/) | [Request a Feature](https://www.linkedin.com/in/don7amza/) | [Contact](https://www.linkedin.com/in/don7amza/)
 
 </div>
