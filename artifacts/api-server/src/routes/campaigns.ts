@@ -41,6 +41,7 @@ const PLATFORM_MAP: Record<string, string> = {
   "5": "Mobile other",
 };
 
+/** Convert a numeric platform ID to its display name, or pass through as-is. */
 function normalizePlatform(p: string): string {
   return PLATFORM_MAP[p.trim()] ?? p.trim();
 }
