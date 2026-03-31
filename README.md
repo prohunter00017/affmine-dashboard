@@ -90,7 +90,7 @@ For local development without Docker.
 
 ### Prerequisites
 
-- **Node.js** 20 or later
+- **Node.js** 20 or later (Node.js 24 recommended)
 - **pnpm** 9 or later (`corepack enable && corepack prepare pnpm@latest --activate`)
 
 ### Installation
@@ -314,7 +314,7 @@ In development mode (without Docker), credentials are stored in **browser localS
 - `affmine_aff_id` — Your affiliate ID
 - `affmine_api_key` — Your API key
 
-These are sent only to the proxy server, which forwards them to the official AffMine API. Credentials never leave your local network.
+These are sent only to your local proxy server, which forwards them to the official AffMine API. No third-party services receive your credentials.
 
 </details>
 
