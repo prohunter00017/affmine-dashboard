@@ -31,7 +31,7 @@ COPY lib/api-spec/package.json        lib/api-spec/
 COPY artifacts/api-server/package.json        artifacts/api-server/
 COPY artifacts/affmine-dashboard/package.json artifacts/affmine-dashboard/
 
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copy all source
 COPY lib/          lib/

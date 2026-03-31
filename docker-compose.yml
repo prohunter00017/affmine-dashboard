@@ -13,15 +13,15 @@ services:
     container_name: affmine-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: affmine
-      POSTGRES_PASSWORD: affmine
-      POSTGRES_DB: affmine
+      POSTGRES_USER: "${POSTGRES_USER:-affmine}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-affmine}"
+      POSTGRES_DB: "${POSTGRES_DB:-affmine}"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U affmine -d affmine"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-affmine} -d ${POSTGRES_DB:-affmine}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -38,7 +38,7 @@ services:
         condition: service_healthy
     environment:
       PORT: "5000"
-      DATABASE_URL: "postgresql://affmine:affmine@postgres:5432/affmine"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-affmine}:${POSTGRES_PASSWORD:-affmine}@postgres:5432/${POSTGRES_DB:-affmine}"
       AFF_ID: "${AFF_ID}"
       API_KEY: "${API_KEY}"
       NODE_ENV: production
