@@ -35,7 +35,7 @@ AffMine Publisher Dashboard is a full-stack web application that connects to the
 - **CSV Export** — Export all filtered campaigns to CSV with a single click
 - **Analytics Dashboard** — Visual breakdowns by category, platform, country, and payout statistics
 - **Dark Theme with Green Accent** — Professional UI built with Tailwind CSS and shadcn/ui
-- **Secure Credential Storage** — API credentials stored locally in the browser, never sent to third parties
+- **Local Credential Storage** — API credentials stored in browser localStorage and sent only to your proxy server
 - **Docker Deployment** — One-command deployment with the included installer script
 - **Type-Safe Architecture** — End-to-end TypeScript with auto-generated API clients via Orval
 
@@ -110,7 +110,7 @@ pnpm --filter @workspace/api-server run dev
 pnpm --filter @workspace/affmine-dashboard run dev
 ```
 
-Open **http://localhost:3000**, navigate to **Settings**, and enter your AffMine `aff_id` and `api_key`. The dashboard will begin loading campaign data immediately.
+Open **http://localhost:3000**, navigate to **Settings**, and enter your AffMine `aff_id` and `api_key`. Credentials are entered in-app (no `.env` file needed for local development). The dashboard will begin loading campaign data immediately.
 
 ### Useful Commands
 
@@ -212,7 +212,7 @@ Credential management and system status:
 - Enter and validate your AffMine `aff_id` and `api_key`
 - Live validation against the AffMine API
 - Proxy server health check indicator
-- Credentials stored securely in browser localStorage
+- Credentials stored in browser localStorage
 
 </details>
 
