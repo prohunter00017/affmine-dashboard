@@ -8,6 +8,7 @@
 import { Link, useLocation } from "wouter";
 import { Activity, LayoutDashboard, List, Settings, TrendingUp } from "lucide-react";
 import { CredentialsBanner } from "./credentials-banner";
+import { useFavorites } from "@/hooks/use-favorites";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -16,10 +17,11 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
+  const { count: favCount } = useFavorites();
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/campaigns", label: "Campaign Browser", icon: List },
+    { href: "/campaigns", label: "Campaign Browser", icon: List, badge: favCount > 0 ? favCount : undefined },
     { href: "/stats", label: "Analytics", icon: TrendingUp },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
@@ -47,8 +49,13 @@ export function Layout({ children }: LayoutProps) {
                   )}
                   data-testid={`nav-link-${item.label.toLowerCase().replace(" ", "-")}`}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge !== undefined && (
+                    <span className="ml-auto text-[10px] font-mono font-bold bg-yellow-400/15 text-yellow-400 border border-yellow-400/30 px-1.5 py-0.5 rounded-full leading-none">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
               </Link>
             );
