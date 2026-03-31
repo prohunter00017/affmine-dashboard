@@ -147,8 +147,10 @@ export default function Stats() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     contentStyle={{ backgroundColor: 'hsl(220, 20%, 11%)', borderColor: 'hsl(220, 20%, 15%)', color: '#fff', borderRadius: '4px' }}
+                    itemStyle={{ color: 'hsl(140, 100%, 45%)' }}
+                    labelStyle={{ color: '#fff', fontWeight: 600, marginBottom: 4 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
